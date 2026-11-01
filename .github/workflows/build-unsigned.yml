@@ -1,0 +1,54 @@
+name: Build unsigned iPhone probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Sources/**'
+      - 'Tests/**'
+      - 'ChainProbe.xcodeproj/**'
+      - 'Package.swift'
+      - 'scripts/**'
+      - '.github/workflows/build-unsigned.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chain-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Never silently run this workflow against a private repository's allowance.
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check generated project
+        run: node scripts/project.mjs --check
+      - name: Test marker persistence and build A and B
+        run: bash scripts/build.sh
+      - name: Save unsigned IPAs and evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chain-probe-${{ github.run_number }}-${{ github.run_attempt }}
+          path: dist/
+          retention-days: 3
+          if-no-files-found: error
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chain-probe-logs-${{ github.run_number }}-${{ github.run_attempt }}
+          path: build/logs/
+          retention-days: 3
+          if-no-files-found: warn
