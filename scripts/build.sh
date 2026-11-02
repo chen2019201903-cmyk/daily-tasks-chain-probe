@@ -48,7 +48,7 @@ for variant in A B; do
   plutil -lint "$app/Info.plist"
   [[ "$(/usr/libexec/PlistBuddy -c 'Print :ProbeVariant' "$app/Info.plist")" == "$variant" ]]
   [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" == "$build_version" ]]
-  lipo -verify_arch arm64 "$app/ChainProbe"
+  lipo "$app/ChainProbe" -verify_arch arm64
   if codesign -d "$app" >"build/logs/signature-${variant}.txt" 2>&1; then
     echo 'Unexpected signature. Refusing to call this an unsigned build.' >&2
     exit 1
